@@ -41,6 +41,8 @@ type Configuration struct {
 		Name  string
 	}
 	Video struct {
-		Path string
+		Path           string
+		Secret         string
+		ActivateSecret bool
 	}
 }

@@ -1,12 +1,12 @@
 {
   "Host": "0.0.0.0",
   "Port": 11001,
-  "Version": "v0.0.2",
+  "Version": "v0.0.3",
   "SSL": {
     "Path": "./conf/ssl/",
     "Cert": "localhost.crt",
     "Key": "localhost.key",
-    "Enabled": false
+    "Enabled": true
   },
   "Redis": {
     "Host": "0.0.0.0",
@@ -22,6 +22,8 @@
     "Name": "log.txt"
   },
   "Video": {
-    "Path": "C:\\Users\\Alessio.Savi\\Videos\\"
+    "Path": "C:\\Users\\Alessio.Savi\\Videos\\",
+    "Secret": "!=CBrM$Wdvv=vS9?6f\\Gz$rgT<)VM#=Y",
+    "ActivateSecret": false
   }
 }

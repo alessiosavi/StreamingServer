@@ -87,8 +87,20 @@ func VerifyCookieFromRedisHTTPCore(user, token string, redisClient *redis.Client
 			if dbToken, err := basicredis.GetTokenFromDB(redisClient, user); err == nil {
 				log.Trace("VerifyCookieFromRedisHTTPCore | Data retrieved!")
 				if strings.Compare(dbToken, token) == 0 {
-					log.Info("VerifyCookieFromRedisHTTPCore | Token MATCH!! User is logged! | ", user, " | ", token)
-					return nil
+					log.Info("VerifyCookieFromRedisHTTPCore | Token MATCH!! User is logged! | " + user + " | " + token)
+					log.Debug("VerifyCookieFromRedisHTTPCore | Verifying if the user is active")
+					var User datastructures.User // Allocate a Person for store the DB result of next instruction
+					if err = basicredis.GetValueFromDB(redisClient, user, &User); err == nil {
+						if User.Active {
+							log.Debug("VerifyCookieFromRedisHTTPCore | User [" + user + "] is active")
+							return nil
+						}
+						log.Warning("VerifyCookieFromRedisHTTPCore | User [" + user + "] is not active yet")
+						return errors.New("user is registered and logged, but the account is not active yet. " +
+							"Contact the admin for activate the user [" + User.Username + "]")
+					}
+					log.Warning("VerifyCookieFromRedisHTTPCore | Token is valid but the User is not in DB -.- ??")
+					return err
 				}
 				log.Error("VerifyCookieFromRedisHTTPCore | Token MISMATCH!! User is NOT logged! | ", user, " | TK: ", token, " | DB: ", dbToken)
 				return errors.New("NOT_AUTHORIZED")
@@ -268,5 +280,6 @@ func CreateCookie(key string, value string, expire int) *fasthttp.Cookie {
 	authCookie.SetMaxAge(expire)
 	authCookie.SetHTTPOnly(true)
 	authCookie.SetPath("/")
+	authCookie.SetSameSite(fasthttp.CookieSameSiteStrictMode)
 	return &authCookie
 }

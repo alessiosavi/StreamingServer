@@ -14,7 +14,7 @@ import (
 
 func ListAndServerGZIP(host string, _port int, gzipHandler fasthttp.RequestHandler) {
 	port := strconv.Itoa(_port)
-	log.Info("ListAndServerGZIP | Trying estabilishing connection @[http://", host, ":", port)
+	log.Infof("ListAndServerGZIP | Trying estabilishing connection @[http://%s:%d]", host, port)
 	err := fasthttp.ListenAndServe(host+":"+port, gzipHandler) // Try to start the server with input "host:port" received in input
 	if err != nil {                                            // No luck, connection not succesfully. Probably port used ...
 		log.Warn("ListAndServerGZIP | Port [", port, "] seems used :/")
@@ -23,7 +23,7 @@ func ListAndServerGZIP(host string, _port int, gzipHandler fasthttp.RequestHandl
 			log.Info("ListAndServerGZIP | Round ", strconv.Itoa(i), "] No luck! Connecting to anotother random port [@", port, "] ...")
 			err := fasthttp.ListenAndServe(host+":"+port, gzipHandler) // Trying with the random port generate few step above
 			if err == nil {                                            // Connection estabileshed! Not reached
-				log.Info("ListAndServerGZIP | Connection estabilished @[http://", host, ":", port)
+				log.Info("ListAndServerGZIP | Connection estabilished @[http://%s:%d]", host, port)
 				break
 			}
 		}
@@ -35,7 +35,7 @@ func ListAndServerSSL(host, _path, pub, priv string, _port int, gzipHandler fast
 	priv = path.Join(_path, priv)
 	if fileutils.FileExists(pub) && fileutils.FileExists(priv) {
 		port := strconv.Itoa(_port)
-		log.Info("ListAndServerSSL | Trying estabilishing connection @[https://", host, ":", port)
+		log.Infof("ListAndServerSSL | Trying estabilishing connection @[https://%s:%s]", host, port)
 		err := fasthttp.ListenAndServeTLS(host+":"+port, pub, priv, gzipHandler) // Try to start the server with input "host:port" received in input
 		if err != nil {                                                          // No luck, connection not succesfully. Probably port used ...
 			log.Warn("ListAndServerSSL | Port [", port, "] seems used :/")
@@ -44,7 +44,7 @@ func ListAndServerSSL(host, _path, pub, priv string, _port int, gzipHandler fast
 				log.Info("ListAndServerSSL | Round ", i, "] No luck! Connecting to anotother random port [@"+port+"] ...")
 				err := fasthttp.ListenAndServeTLS(host+":"+port, pub, priv, gzipHandler) // Trying with the random port generate few step above
 				if err == nil {                                                          // Connection estabileshed! Not reached
-					log.Info("ListAndServerSSL | Connection estabilished @[https://", host, ":", port)
+					log.Infof("ListAndServerSSL | Connection estabilished @[https://%s:%s]", host, port)
 					break
 				}
 			}

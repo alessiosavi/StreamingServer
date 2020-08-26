@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	stringutils "github.com/alessiosavi/GoGPUtils/string"
 	"path"
 	"strings"
@@ -79,6 +80,8 @@ func handleRequests(cfg datastructures.Configuration, redisClient *redis.Client)
 			expvarhandler.ExpvarHandler(ctx)
 		case "/play":
 			PlayVideo(ctx, cfg, redisClient)
+		case "/activate":
+			ActivateUser(ctx, cfg, redisClient)
 		default:
 			_, err := ctx.WriteString("The url " + string(ctx.URI().RequestURI()) + string(ctx.QueryArgs().QueryString()) + " does not exist :(\n")
 			commonutils.Check(err, "handleRequests")
@@ -87,8 +90,12 @@ func handleRequests(cfg datastructures.Configuration, redisClient *redis.Client)
 	}
 	// ==== GZIP HANDLER ====
 	// The gzipHandler will serve a compress request only if the client request it with headers (Content-Type: gzip, deflate)
-	gzipHandler := fasthttp.CompressHandlerLevel(m, fasthttp.CompressBestSpeed) // Compress data before sending (if requested by the client)
-	log.Info("HandleRequests | Binding services to @[", cfg.Host, ":", cfg.Port)
+	gzipHandler := fasthttp.CompressHandlerLevel(m, fasthttp.CompressBestCompression) // Compress data before sending (if requested by the client)
+	ssl := ""
+	if cfg.SSL.Enabled {
+		ssl = "s"
+	}
+	log.Infof("HandleRequests | Binding services to @[http%s://"+cfg.Host+":%d]", ssl, cfg.Port)
 
 	// ==== SSL HANDLER + GZIP if requested ====
 	if cfg.SSL.Enabled {
@@ -97,6 +104,54 @@ func handleRequests(cfg datastructures.Configuration, redisClient *redis.Client)
 	// ==== Simple GZIP HANDLER ====
 	httputils.ListAndServerGZIP(cfg.Host, cfg.Port, gzipHandler)
 	log.Trace("HandleRequests | STOP")
+}
+
+func ActivateUser(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redisClient *redis.Client) error {
+	var err error
+	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
+	if !cfg.Video.ActivateSecret {
+		err = errors.New("ACTIVATE_DISABLED")
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Activation functionality is disabled", ErrorCode: err.Error(), Data: nil})
+		return err
+	}
+
+	user, pass := authutils.ParseAuthCredentialsFromRequestBody(ctx)
+	if stringutils.IsBlank(user) {
+		log.Warning("ActivateUser | User parameter is empty!")
+		err = errors.New("USER_PARM_NOT_PROVIDED")
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User parameter not provided", ErrorCode: err.Error(), Data: nil})
+		return err
+	}
+	if stringutils.IsBlank(pass) {
+		log.Warning("ActivateUser | Pass parameter is empty!")
+		err = errors.New("PASS_PARM_NOT_PROVIDED")
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Pass parameter not provided", ErrorCode: err.Error(), Data: nil})
+		return err
+	}
+
+	if strings.Compare(cfg.Video.Secret, stringutils.Trim(pass)) != 0 {
+		log.Warningf("ActivateUser | Password provided [%s] does not match the secret [%s]", pass, cfg.Video.Secret)
+		err = errors.New("PASS_NOT_MATCH_SECRET")
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Password does not match the secret token in configuration", ErrorCode: err.Error(), Data: nil})
+		return err
+	}
+
+	var User datastructures.User // Allocate a Person for store the DB result of next instruction
+	if err = basicredis.GetValueFromDB(redisClient, user, &User); err == nil {
+		if User.Active {
+			log.Warningf("ActivateUser | User [%s] is already activated...", user)
+			err = errors.New("USER_ALREADY_ACTIVE")
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User [" + user + "] is already activated", ErrorCode: err.Error(), Data: nil})
+			return err
+		}
+		User.Active = true
+		if err = basicredis.InsertValueIntoDB(redisClient, user, User); err == nil {
+			log.Infof("ActivateUser | User [%s] was activated correctly!", user)
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User [" + user + "] is activated", ErrorCode: "nil", Data: nil})
+			return nil
+		}
+	}
+	return err
 }
 
 // PlayVideo is delegated to play the videos in input
@@ -117,7 +172,7 @@ func PlayVideo(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redis
 		ctx.SendFile(f)
 	} else {
 		ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User is not logged in", ErrorCode: "NOT_LOGGED", Data: nil})
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: err.Error(), ErrorCode: "NOT_LOGGED", Data: nil})
 		return
 	}
 }
@@ -194,10 +249,14 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg d
 			log.Debug("AuthLoginWrapper | Login succesfully! Generating token!")
 			token := basiccrypt.GenerateToken(username, password) // Generate a simple md5 hashed token
 			log.Info("AuthLoginWrapper | Inserting token into Redis ", token)
-			basicredis.InsertTokenFromDB(redisClient, username, token, cfg.Redis.Token.Expire) // insert the token into the DB
+			basicredis.InsertTokenIntoDB(redisClient, username, token, cfg.Redis.Token.Expire) // insert the token into the DB
 			log.Info("AuthLoginWrapper | Token inserted! All operation finished correctly! | Setting token into response")
 			authcookie := authutils.CreateCookie("GoLog-Token", token, cfg.Redis.Token.Expire)
 			usernameCookie := authutils.CreateCookie("username", username, cfg.Redis.Token.Expire)
+			if cfg.SSL.Enabled {
+				authcookie.SetSecure(true)
+				usernameCookie.SetSecure(true)
+			}
 			ctx.Response.Header.SetCookie(authcookie)     // Set the token into the cookie headers
 			ctx.Response.Header.SetCookie(usernameCookie) // Set the token into the cookie headers
 			ctx.Response.Header.Set("GoLog-Token", token) // Set the token into a custom headers for future security improvments

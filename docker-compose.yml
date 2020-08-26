@@ -1,19 +1,19 @@
 version: "3.3"
 services:
-  authentigo:
+  streamingserver:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "0.0.0.0:11001:11001"
-    restart: always
     expose:
-      - 11001
+      - "11001"
+    restart: always
     depends_on:
       - redisdb
-    network_mode: "host"
     volumes:
       - go-modules:/go/pkg/mod
+    network_mode: "host"
 
   redisdb:
     container_name: redis

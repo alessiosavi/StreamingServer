@@ -65,23 +65,23 @@ func RemoveValueFromDB(client *redis.Client, key string) error {
 	return err
 }
 
-// InsertTokenFromDB set the two value into the Databased pointed from the client
-func InsertTokenFromDB(client *redis.Client, key string, value string, expire int) error {
+// InsertTokenIntoDB set the two value into the Databased pointed from the client
+func InsertTokenIntoDB(client *redis.Client, key string, value string, expire int) error {
 	key = key + "_token"
-	log.Info("InsertIntoClient | Inserting -> (", key, ":", value, ")")
+	log.Info("InsertTokenIntoDB | Inserting -> (", key, ":", value, ")")
 	err := client.Set(key, value, 0).Err() // Inserting the values into the DB
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 	duration := time.Second * time.Duration(expire)
-	log.Debug("InsertIntoClient | Setting ", expire, " seconds as expire time | Duration: ", duration)
+	log.Debug("InsertTokenIntoDB | Setting ", expire, " seconds as expire time | Duration: ", duration)
 	err1 := client.Expire(key, duration)
 	if err1.Err() != nil {
 		log.Error("Unable to set expiration time ... | Err: ", err1)
 		return err
 	}
-	log.Info("InsertIntoClient | INSERTED SUCCESFULLY!! | (", key, ":", value, ")")
+	log.Info("InsertTokenIntoDB | INSERTED SUCCESFULLY!! | (", key, ":", value, ")")
 	return nil
 }
 
@@ -90,7 +90,7 @@ func GetTokenFromDB(client *redis.Client, key string) (string, error) {
 	var err error
 	var token string
 	key = key + "_token"
-	log.Info("InsertIntoClient | Retrieving -> (", key, ")")
+	log.Info("GetTokenFromDB | Retrieving -> (", key, ")")
 	if token, err = client.Get(key).Result(); err != nil {
 		log.Error("GetTokenFromDB | Unable to retrieve the token for the key: [", key, "] | Err:", err)
 		return "", err
