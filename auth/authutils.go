@@ -62,7 +62,12 @@ func RegisterUserHTTPCore(username, password string, redisClient *redis.Client) 
 	var User datastructures.User
 	if err := basicredis.GetValueFromDB(redisClient, username, &User); err == redis.Nil {
 		log.Debug("RegisterUserHTTPCore | User [", username, "] does not exists, inserting into DB")
-		User := datastructures.User{Username: username, Password: basiccrypt.Encrypt([]byte(password), username+":"+password)} // Create the user
+		User := datastructures.User{ // Create the user
+			Username: username,
+			Password: basiccrypt.Encrypt([]byte(password), username+":"+password),
+			Email:    "",
+			Active:   false,
+		}
 		return basicredis.InsertValueIntoDB(redisClient, User.Username, User)
 	}
 	return errors.New("ALREADY_EXIST")

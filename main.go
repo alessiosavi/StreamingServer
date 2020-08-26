@@ -74,11 +74,11 @@ func handleRequests(cfg datastructures.Configuration, redisClient *redis.Client)
 		case "/auth/verify":
 			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if an user is authorized to use the service
 		case "/stream":
-			StreamVideos(ctx, cfg, redisClient)
+			StreamVideos(ctx, cfg)
 		case "/stats":
 			expvarhandler.ExpvarHandler(ctx)
 		case "/play":
-			PlayVideo(ctx, cfg)
+			PlayVideo(ctx, cfg, redisClient)
 		default:
 			_, err := ctx.WriteString("The url " + string(ctx.URI().RequestURI()) + string(ctx.QueryArgs().QueryString()) + " does not exist :(\n")
 			commonutils.Check(err, "handleRequests")
@@ -100,37 +100,40 @@ func handleRequests(cfg datastructures.Configuration, redisClient *redis.Client)
 }
 
 // PlayVideo is delegated to play the videos in input
-func PlayVideo(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration) {
-	video := string(ctx.FormValue("video"))
-	if stringutils.IsBlank(video) {
+func PlayVideo(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redisClient *redis.Client) {
+	if err := VerifyCookieFromRedisHTTP(ctx, redisClient); err == nil {
+		video := string(ctx.FormValue("video"))
+		if stringutils.IsBlank(video) {
+			ctx.Response.Header.SetContentType("application/json; charset=utf-8")
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "video parameter is empty", ErrorCode: "EMPTY_VIDEO_PARM", Data: nil})
+			return
+		}
+		f := path.Join(cfg.Video.Path, video)
+		if !fileutils.FileExists(f) {
+			ctx.Response.Header.SetContentType("application/json; charset=utf-8")
+			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "video " + video + " does not exists", ErrorCode: "VIDEO_NOT_FOUND", Data: nil})
+			return
+		}
+		ctx.SendFile(f)
+	} else {
 		ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-		json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "video parameter is empty", ErrorCode: "EMPTY_VIDEO_PARM", Data: nil})
+		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User is not logged in", ErrorCode: "NOT_LOGGED", Data: nil})
 		return
 	}
-	f := path.Join(cfg.Video.Path, video)
-	if !fileutils.FileExists(f) {
-		ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-		json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "video " + video + " does not exists", ErrorCode: "VIDEO_NOT_FOUND", Data: nil})
-		return
-	}
-	ctx.SendFile(f)
 }
 
 // StreamVideos is delegated to verify if the user is logged in and expose the video to stream
-func StreamVideos(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redisClient *redis.Client) {
+func StreamVideos(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration) {
 	ctx.Response.Header.SetContentType("text/html; charset=utf-8")
-	if err := VerifyCookieFromRedisHTTP(ctx, redisClient); err == nil {
-		log.Debug("StreamVideos | User is logged, exposing the following folder: ", cfg.Video.Path)
-		files := fileutils.ListFile(cfg.Video.Path)
-		var s strings.Builder
-		s.WriteString("<ol>\n")
-		for _, f := range files {
-			f = strings.Replace(f, cfg.Video.Path, "", 1)
-			s.WriteString(`<li><a href="http://` + string(ctx.Request.Host()) + `/play?video=` + f + `">` + f + "</a></li>" + "\n")
-		}
-		s.WriteString("</ol>")
-		ctx.WriteString(s.String() + "\n")
+	files := fileutils.ListFile(cfg.Video.Path)
+	var s strings.Builder
+	s.WriteString("<ol>\n")
+	for _, f := range files {
+		f = strings.Replace(f, cfg.Video.Path, "", 1)
+		s.WriteString(`<li><a href="http://` + string(ctx.Request.Host()) + `/play?video=` + f + `">` + f + "</a></li>" + "\n")
 	}
+	s.WriteString("</ol>")
+	ctx.WriteString(s.String() + "\n")
 }
 
 //AuthRegisterWrapper is the authentication wrapper for register the client into the service.
@@ -194,7 +197,9 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg d
 			basicredis.InsertTokenFromDB(redisClient, username, token, cfg.Redis.Token.Expire) // insert the token into the DB
 			log.Info("AuthLoginWrapper | Token inserted! All operation finished correctly! | Setting token into response")
 			authcookie := authutils.CreateCookie("GoLog-Token", token, cfg.Redis.Token.Expire)
+			usernameCookie := authutils.CreateCookie("username", username, cfg.Redis.Token.Expire)
 			ctx.Response.Header.SetCookie(authcookie)     // Set the token into the cookie headers
+			ctx.Response.Header.SetCookie(usernameCookie) // Set the token into the cookie headers
 			ctx.Response.Header.Set("GoLog-Token", token) // Set the token into a custom headers for future security improvments
 			log.Warn("AuthLoginWrapper | Client logged in succesfully!! | ", username, ":", password, " | Token: ", token)
 			err := json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User logged in!", ErrorCode: username + ":" + password, Data: token})
@@ -228,22 +233,26 @@ func ParseAuthenticationCoreHTTP(ctx *fasthttp.RequestCtx) (string, string) {
 	} // In other case call the delegated method for extract the credentials from the body of the Request
 	log.Info("ParseAuthenticationCoreHTTP | Credentials not in Headers, retrieving from body ...")
 	user, pass := authutils.ParseAuthCredentialsFromRequestBody(ctx) // Used for extract user and password from the request
+	if stringutils.IsBlank(user) {
+		log.Info("ParseAuthenticationCoreHTTP | Username not in body, retrieving from cookie ...")
+		user = string(ctx.Request.Header.Cookie("username"))
+	}
 	return user, pass
 }
 
 // VerifyCookieFromRedisHTTP wrapper for verify if the user is logged
 func VerifyCookieFromRedisHTTP(ctx *fasthttp.RequestCtx, redisClient *redis.Client) error {
-	var err error
 	log.Debug("VerifyCookieFromRedisHTTP | Retrieving username ...")
 	user, _ := ParseAuthenticationCoreHTTP(ctx)
 	log.Debug("VerifyCookieFromRedisHTTP | Retrieving token ...")
 	token := ParseTokenFromRequest(ctx)
 	log.Debug("VerifyCookieFromRedisHTTP | Retrieving cookie from redis ...")
-	if err = authutils.VerifyCookieFromRedisHTTPCore(user, token, redisClient); err != nil { // Verify if an user is authorized to use the service
-		ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Not logged in!", ErrorCode: err.Error(), Data: nil})
-	}
-	return err
+	//if err = authutils.VerifyCookieFromRedisHTTPCore(user, token, redisClient); err != nil { // Verify if an user is authorized to use the service
+	//ctx.Response.Header.SetContentType("application/json; charset=utf-8")
+	//json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Not logged in!", ErrorCode: err.Error(), Data: nil})
+	//}
+	//return err
+	return authutils.VerifyCookieFromRedisHTTPCore(user, token, redisClient)
 }
 
 // ParseTokenFromRequest is delegated to retrieved the token encoded in the request. The token can be sent in two different way.

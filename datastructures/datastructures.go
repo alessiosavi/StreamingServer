@@ -5,6 +5,7 @@ type User struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Email    string `json:"email"`
+	Active   bool   `json:"active"`
 }
 
 // Response structure used for populate the json response for the RESTfull HTTP API
