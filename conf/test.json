@@ -1,0 +1,27 @@
+{
+  "Host": "0.0.0.0",
+  "Port": 11001,
+  "Version": "v0.0.2",
+  "SSL": {
+    "Path": "./conf/ssl/",
+    "Cert": "localhost.crt",
+    "Key": "localhost.key",
+    "Enabled": false
+  },
+  "Redis": {
+    "Host": "0.0.0.0",
+    "Port": "6379",
+    "Token": {
+      "Expire": 300,
+      "DB": 1
+    }
+  },
+  "Log": {
+    "Level": "trace",
+    "Path": "./log/",
+    "Name": "log.txt"
+  },
+  "Video": {
+    "Path": "C:\\Users\\Alessio.Savi\\Videos\\"
+  }
+}

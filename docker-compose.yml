@@ -1,0 +1,33 @@
+version: "3.3"
+services:
+  authentigo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:11001:11001"
+    restart: always
+    expose:
+      - 11001
+    depends_on:
+      - redisdb
+    network_mode: "host"
+    volumes:
+      - go-modules:/go/pkg/mod
+
+  redisdb:
+    container_name: redis
+    image: redis
+    restart: always
+    ports:
+      - "0.0.0.0:6379:6379"
+    expose:
+      - "6379"
+    volumes:
+      - redis-db:/var/lib/redis
+    entrypoint: redis-server --appendonly yes
+    network_mode: "host"
+
+volumes:
+  redis-db:
+  go-modules:
