@@ -1,0 +1,2 @@
+# StreamingServer
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/9c5dc127effe4048b33ed1718190c299)](https://app.codacy.com/manual/alessiosavi/StreamingServer?utm_source=github.com&utm_medium=referral&utm_content=alessiosavi/StreamingServer&utm_campaign=Badge_Grade_Dashboard)
