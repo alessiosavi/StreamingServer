@@ -8,6 +8,7 @@ import (
 	stringutils "github.com/alessiosavi/GoGPUtils/string"
 	"path"
 	"strings"
+	"time"
 
 	authutils "github.com/alessiosavi/StreamingServer/auth"
 	basiccrypt "github.com/alessiosavi/StreamingServer/crypt"
@@ -42,9 +43,9 @@ func main() {
 	log.SetLevel(commonutils.SetDebugLevel(cfg.Log.Level))
 
 	// ==== CONNECT TO REDIS ====
-	redisClient := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Token.DB)
-	if redisClient == nil {
-		log.Fatal("Unable to connect to redis!")
+	redisClient, err := basicredis.ConnectToDb(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Token.DB)
+	if err != nil {
+		log.Fatal("Unable to connect to redis! | Err: " + err.Error())
 		return
 	}
 	defer redisClient.Close()
@@ -256,7 +257,7 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg d
 			log.Debug("AuthLoginWrapper | Login succesfully! Generating token!")
 			token := basiccrypt.GenerateToken(username, password) // Generate a simple md5 hashed token
 			log.Info("AuthLoginWrapper | Inserting token into Redis ", token)
-			basicredis.InsertTokenIntoDB(redisClient, username, token, cfg.Redis.Token.Expire) // insert the token into the DB
+			basicredis.InsertTokenIntoDB(redisClient, username, token, time.Second*time.Duration(cfg.Redis.Token.Expire)) // insert the token into the DB
 			log.Info("AuthLoginWrapper | Token inserted! All operation finished correctly! | Setting token into response")
 			authcookie := authutils.CreateCookie("GoLog-Token", token, cfg.Redis.Token.Expire)
 			usernameCookie := authutils.CreateCookie("username", username, cfg.Redis.Token.Expire)

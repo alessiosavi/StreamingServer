@@ -113,7 +113,7 @@ We use [SemVer](http://semver.org/) for versioning.
 
 ## Authors
 
-- **Alessio Savi** - *Initial work & Concept* - [Linkedin](https://www.linkedin.com/in/alessio-savi-2136b2188/) - [Github](https://github.com/alessiosavi/StreamingServer)
+- **Alessio Savi** - *Initial work & Concept* - [Linkedin](https://www.linkedin.com/in/alessio-savi-2136b2188/) - [Github](https://github.com/alessiosavi)
 
 ## Contributors
 - **Alessio Savi** 

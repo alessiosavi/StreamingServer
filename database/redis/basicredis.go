@@ -10,7 +10,7 @@ import (
 )
 
 // ConnectToDb use emtpy string for hardcoded port
-func ConnectToDb(addr string, port string, db int) *redis.Client {
+func ConnectToDb(addr string, port string, db int) (*redis.Client, error) {
 	// Empty addr and port for default connection
 	if strings.Compare(addr, port) == 0 {
 		addr = "localhost"
@@ -24,11 +24,11 @@ func ConnectToDb(addr string, port string, db int) *redis.Client {
 	log.Info("Connecting to -> ", client)
 	err := client.Ping().Err()
 	if err != nil {
-		log.Errorf("Impossibile to connecto to DB ...| CLIENT: [%+v] | Addr: [%s] | Port: [%d] | ERR: [%s]", client, addr, port, err.Error())
-		return nil
+		log.Errorf("Impossibile to connecto to DB ...| CLIENT: [%+v] | Addr: [%s] | Port: [%s] | ERR: [%s]", client, addr, port, err.Error())
+		return nil, err
 	}
 	log.Infof("Succesfully connected to -> [%+v]", client)
-	return client
+	return client, nil
 }
 
 // GetValueFromDB is delegated to check if a key is alredy inserted and return the value in the dest variable in signature
@@ -45,7 +45,7 @@ func GetValueFromDB(client *redis.Client, key string, dest interface{}) error {
 		log.Warn("GetValueFromDB | Key -> " + key + " does not exist")
 		return err
 	}
-	log.Error("GetValueFromDB | Fatal exception during retrieving of data [%s] | Redis: [%s]", key, client)
+	log.Errorf("GetValueFromDB | Fatal exception during retrieving of data [%s] | Redis: [%+v]", key, client)
 	log.Error(err)
 	return err
 }
@@ -54,10 +54,10 @@ func GetValueFromDB(client *redis.Client, key string, dest interface{}) error {
 func RemoveValueFromDB(client *redis.Client, key string) error {
 	err := client.Del(key).Err()
 	if err == nil {
-		log.Debug("RemoveValueFromDB | SUCCESS | Key: [%s] | Removed", key)
+		log.Debugf("RemoveValueFromDB | SUCCESS | Key: [%s] | Removed", key)
 		return nil
 	} else if err == redis.Nil {
-		log.Warn("RemoveValueFromDB | Key -> [%s] does not exist", key)
+		log.Warnf("RemoveValueFromDB | Key -> [%s] does not exist", key)
 		return err
 	}
 	log.Error("RemoveValueFromDB | Fatal exception during retrieving of data [", key, "] | Redis: ", client)
@@ -66,21 +66,20 @@ func RemoveValueFromDB(client *redis.Client, key string) error {
 }
 
 // InsertTokenIntoDB set the two value into the Databased pointed from the client
-func InsertTokenIntoDB(client *redis.Client, key string, value string, expire int) error {
+func InsertTokenIntoDB(client *redis.Client, key string, value string, expire time.Duration) error {
 	key = key + "_token"
 	log.Infof("InsertTokenIntoDB | Inserting -> (%s:%s)", key, value)
-	err := client.Set(key, value, 0).Err() // Inserting the values into the DB
+	err := client.Set(key, value, expire).Err() // Inserting the values into the DB
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	duration := time.Second * time.Duration(expire)
-	log.Debug("InsertTokenIntoDB | Setting ", expire, " seconds as expire time | Duration: ", duration)
-	err1 := client.Expire(key, duration)
-	if err1.Err() != nil {
-		log.Error("Unable to set expiration time ... | Err: ", err1)
-		return err
-	}
+	//log.Debug("InsertTokenIntoDB | Setting ", expire, " seconds as expire time")
+	//err1 := client.Expire(key, expire)
+	//if err1.Err() != nil {
+	//	log.Error("Unable to set expiration time ... | Err: ", err1)
+	//	return err
+	//}
 	log.Infof("InsertTokenIntoDB | INSERTED SUCCESFULLY!! | (%s:%s)", key, value)
 	return nil
 }
@@ -102,9 +101,11 @@ func GetTokenFromDB(client *redis.Client, key string) (string, error) {
 
 // InsertValueIntoDB is delegated to save a general structure into redis
 func InsertValueIntoDB(client *redis.Client, key string, value interface{}) error {
-	p, err := json.Marshal(value)
-	if err != nil {
+	var data []byte
+	var err error
+	if data, err = json.Marshal(value); err != nil {
+		log.Errorf("InsertValueIntoDB | Unable to marshall user [%+v] | Err: %s", value, err.Error())
 		return err
 	}
-	return client.Set(key, p, 0).Err()
+	return client.Set(key, data, 0).Err()
 }
