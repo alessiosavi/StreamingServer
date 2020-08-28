@@ -24,10 +24,10 @@ func ConnectToDb(addr string, port string, db int) *redis.Client {
 	log.Info("Connecting to -> ", client)
 	err := client.Ping().Err()
 	if err != nil {
-		log.Error("Impossibile to connecto to DB ...| CLIENT: ", addr, ":", port, " | ERR: ", err)
+		log.Errorf("Impossibile to connecto to DB ...| CLIENT: [%+v] | Addr: [%s] | Port: [%d] | ERR: [%s]", client, addr, port, err.Error())
 		return nil
 	}
-	log.Info("Succesfully connected to -> ", client)
+	log.Infof("Succesfully connected to -> [%+v]", client)
 	return client
 }
 
@@ -39,13 +39,13 @@ func GetValueFromDB(client *redis.Client, key string, dest interface{}) error {
 			log.Error("GetValueFromDB | Unable to unmarshal data from Redis: ", err)
 			return err
 		}
-		log.Debug("GetValueFromDB | SUCCESS | Key: ", key, " | Value: ", dest)
+		log.Debugf("GetValueFromDB | SUCCESS | Key: "+key+" | Value: %+v", dest)
 		return nil
 	} else if err == redis.Nil {
-		log.Warn("GetValueFromDB | Key -> ", key, " does not exist")
+		log.Warn("GetValueFromDB | Key -> " + key + " does not exist")
 		return err
 	}
-	log.Error("GetValueFromDB | Fatal exception during retrieving of data [", key, "] | Redis: ", client)
+	log.Error("GetValueFromDB | Fatal exception during retrieving of data [%s] | Redis: [%s]", key, client)
 	log.Error(err)
 	return err
 }
@@ -54,10 +54,10 @@ func GetValueFromDB(client *redis.Client, key string, dest interface{}) error {
 func RemoveValueFromDB(client *redis.Client, key string) error {
 	err := client.Del(key).Err()
 	if err == nil {
-		log.Debug("RemoveValueFromDB | SUCCESS | Key: ", key, " | Removed")
+		log.Debug("RemoveValueFromDB | SUCCESS | Key: [%s] | Removed", key)
 		return nil
 	} else if err == redis.Nil {
-		log.Warn("RemoveValueFromDB | Key -> ", key, " does not exist")
+		log.Warn("RemoveValueFromDB | Key -> [%s] does not exist", key)
 		return err
 	}
 	log.Error("RemoveValueFromDB | Fatal exception during retrieving of data [", key, "] | Redis: ", client)
@@ -68,7 +68,7 @@ func RemoveValueFromDB(client *redis.Client, key string) error {
 // InsertTokenIntoDB set the two value into the Databased pointed from the client
 func InsertTokenIntoDB(client *redis.Client, key string, value string, expire int) error {
 	key = key + "_token"
-	log.Info("InsertTokenIntoDB | Inserting -> (", key, ":", value, ")")
+	log.Infof("InsertTokenIntoDB | Inserting -> (%s:%s)", key, value)
 	err := client.Set(key, value, 0).Err() // Inserting the values into the DB
 	if err != nil {
 		log.Error(err)
@@ -81,7 +81,7 @@ func InsertTokenIntoDB(client *redis.Client, key string, value string, expire in
 		log.Error("Unable to set expiration time ... | Err: ", err1)
 		return err
 	}
-	log.Info("InsertTokenIntoDB | INSERTED SUCCESFULLY!! | (", key, ":", value, ")")
+	log.Infof("InsertTokenIntoDB | INSERTED SUCCESFULLY!! | (%s:%s)", key, value)
 	return nil
 }
 
@@ -95,7 +95,7 @@ func GetTokenFromDB(client *redis.Client, key string) (string, error) {
 		log.Error("GetTokenFromDB | Unable to retrieve the token for the key: [", key, "] | Err:", err)
 		return "", err
 	}
-	log.Debug("GetTokenFromDB | Token [", token, "] retrieved for the key [", key, "]")
+	log.Debugf("GetTokenFromDB | Token [%s] retrieved for the key [%s]", token, key)
 	return token, nil
 
 }

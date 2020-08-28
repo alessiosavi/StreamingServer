@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	stringutils "github.com/alessiosavi/GoGPUtils/string"
 	"path"
 	"strings"
@@ -182,10 +183,16 @@ func StreamVideos(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration) {
 	ctx.Response.Header.SetContentType("text/html; charset=utf-8")
 	files := fileutils.ListFile(cfg.Video.Path)
 	var s strings.Builder
+	var ssl string
+	if cfg.SSL.Enabled {
+		ssl = "s"
+	}
 	s.WriteString("<ol>\n")
 	for _, f := range files {
 		f = strings.Replace(f, cfg.Video.Path, "", 1)
-		s.WriteString(`<li><a href="http://` + string(ctx.Request.Host()) + `/play?video=` + f + `">` + f + "</a></li>" + "\n")
+		url := fmt.Sprintf(`<li><a href="http%s://%s/play?video=%s">%s</a></li>`, ssl, string(ctx.Request.Host()), f, f)
+		//s.WriteString(`<li><a href="http://` + string(ctx.Request.Host()) + `/play?video=` + f + `">` + f + "</a></li>" + "\n")
+		s.WriteString(url)
 	}
 	s.WriteString("</ol>")
 	ctx.WriteString(s.String() + "\n")

@@ -250,15 +250,6 @@ func ValidateToken(token string) bool {
 }
 
 // RedirectCookie return the cookie by the parameter in input and reassing to the response
-func RedirectCookie(ctx *fasthttp.RequestCtx, expire int) string {
-	var cookie string
-	cookie = string(ctx.Request.Header.Cookie("GoLog-Token"))
-	if stringutils.IsBlank(cookie) {
-		cookie = "USER_NOT_LOGGED_IN"
-	}
-	ctx.Response.Header.SetCookie(CreateCookie("GoLog-Token", cookie, expire))
-	return cookie
-}
 
 // ParseAuthCredentialsFromRequestBody is delegated to extract the username and the password from the request body
 func ParseAuthCredentialsFromRequestBody(ctx *fasthttp.RequestCtx) (string, string) {
