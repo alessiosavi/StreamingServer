@@ -2,38 +2,35 @@ package basicredis
 
 import (
 	"github.com/alessiosavi/StreamingServer/datastructures"
+	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis"
+	"os"
 	"testing"
 	"time"
 )
 
-func TestConnectToDb(t *testing.T) {
-	var err error
-	var client *redis.Client
-	if client, err = ConnectToDb("localhost", "6379", 0); err != nil {
-		t.Error("Unable to connect to the localhost instance")
-	}
-	if client != nil {
-		client.Close()
-	}
-	if client, err = ConnectToDb("localhost", "6378", 0); err == nil {
-		t.Error("Expected an error!")
-	}
-	if client != nil {
-		client.Close()
-	}
-}
+var redisServer *miniredis.Miniredis
+var client *redis.Client
+
+//func TestConnectToDb(t *testing.T) {
+//	var err error
+//	var client *redis.Client
+//	if client, err = ConnectToDb("localhost", "6379", 0); err != nil {
+//		t.Error("Unable to connect to the localhost instance")
+//	}
+//	if client != nil {
+//		client.Close()
+//	}
+//	if client, err = ConnectToDb("localhost", "6378", 0); err == nil {
+//		t.Error("Expected an error!")
+//	}
+//	if client != nil {
+//		client.Close()
+//	}
+//}
 
 func TestGetTokenFromDB(t *testing.T) {
-	var client *redis.Client
 	var err error
-
-	if client, err = ConnectToDb("localhost", "6379", 0); err != nil {
-		t.Error("Unable to connect to Redis instance!")
-		return
-	}
-	defer client.Close()
-
 	if err = client.Set("key_test1_token", "value_test1", 0).Err(); err != nil {
 		t.Error("Unable to insert dummy value into Redis")
 		return
@@ -83,12 +80,7 @@ func TestGetTokenFromDB(t *testing.T) {
 }
 
 func TestGetValueFromDB(t *testing.T) {
-	var client *redis.Client
 	var err error
-	if client, err = ConnectToDb("localhost", "6379", 0); err != nil {
-		t.Error("Unable to connect to Redis instance!")
-		return
-	}
 	user := datastructures.User{
 		Username: "username_test",
 		Password: "password_test",
@@ -100,7 +92,6 @@ func TestGetValueFromDB(t *testing.T) {
 		t.Error("Unable to insert a dummy user | Err: " + err.Error())
 		return
 	}
-	defer client.Close()
 	user = datastructures.User{}
 	type args struct {
 		client *redis.Client
@@ -141,13 +132,6 @@ func TestGetValueFromDB(t *testing.T) {
 }
 
 func TestInsertTokenIntoDB(t *testing.T) {
-	var client *redis.Client
-	var err error
-	if client, err = ConnectToDb("localhost", "6379", 0); err != nil {
-		t.Error("Unable to connect to Redis instance!")
-		return
-	}
-	defer client.Close()
 	type args struct {
 		client *redis.Client
 		key    string
@@ -189,27 +173,85 @@ func TestInsertTokenIntoDB(t *testing.T) {
 	}
 }
 
-//func TestInsertValueIntoDB(t *testing.T) {
-//	type args struct {
-//		client *redis.Client
-//		key    string
-//		value  interface{}
-//	}
-//	tests := []struct {
-//		name    string
-//		args    args
-//		wantErr bool
-//	}{
-//		// TODO: Add test cases.
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			if err := InsertValueIntoDB(tt.args.client, tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
-//				t.Errorf("InsertValueIntoDB() error = %v, wantErr %v", err, tt.wantErr)
-//			}
-//		})
-//	}
-//}
+func TestInsertValueIntoDB(t *testing.T) {
+	type args struct {
+		client *redis.Client
+		key    string
+		value  datastructures.User
+	}
+	var user_ok datastructures.User = datastructures.User{
+		Username: "username",
+		Password: "password",
+		Email:    "email",
+		Active:   false,
+	}
+
+	var user_ko_username datastructures.User = datastructures.User{
+		Username: "",
+		Password: "password",
+		Email:    "email",
+		Active:   false,
+	}
+
+	var user_ko_password datastructures.User = datastructures.User{
+		Username: "username",
+		Password: "",
+		Email:    "email",
+		Active:   false,
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{
+			name: "test_ok_1",
+			args: args{
+				client: client,
+				key:    "key_test",
+				value:  user_ok,
+			},
+			wantErr: false,
+		},
+		{
+			name: "test_ko_2",
+			args: args{
+				client: client,
+				key:    "key_test1",
+				value:  datastructures.User{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test_ko_3",
+			args: args{
+				client: client,
+				key:    "key_ko_test1",
+				value:  user_ko_username,
+			},
+			wantErr: true,
+		},
+		{
+			name: "test_ko_4",
+			args: args{
+				client: client,
+				key:    "key_ko_test2",
+				value:  user_ko_password,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := InsertUserIntoDB(tt.args.client, tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
+				t.Errorf("InsertValueIntoDB() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 //
 //func TestRemoveValueFromDB(t *testing.T) {
 //	type args struct {
@@ -231,3 +273,22 @@ func TestInsertTokenIntoDB(t *testing.T) {
 //		})
 //	}
 //}
+
+func mockRedis() *miniredis.Miniredis {
+	if s, err := miniredis.Run(); err != nil {
+		panic(err)
+	} else {
+		return s
+	}
+}
+func TestMain(m *testing.M) {
+	redisServer = mockRedis()
+	var err error
+	if client, err = ConnectToDb(redisServer.Host(), redisServer.Port(), 0); err != nil {
+		panic(err.Error())
+	}
+	exitVal := m.Run()
+	redisServer.Close()
+	client.Close()
+	os.Exit(exitVal)
+}

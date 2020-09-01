@@ -2,6 +2,9 @@ package basicredis
 
 import (
 	"encoding/json"
+	"errors"
+	stringutils "github.com/alessiosavi/GoGPUtils/string"
+	"github.com/alessiosavi/StreamingServer/datastructures"
 	"strings"
 	"time"
 
@@ -105,6 +108,27 @@ func InsertValueIntoDB(client *redis.Client, key string, value interface{}) erro
 	var err error
 	if data, err = json.Marshal(value); err != nil {
 		log.Errorf("InsertValueIntoDB | Unable to marshall user [%+v] | Err: %s", value, err.Error())
+		return err
+	}
+	return client.Set(key, data, 0).Err()
+}
+
+// InsertValueIntoDB is delegated to save a general structure into redis
+func InsertUserIntoDB(client *redis.Client, key string, user datastructures.User) error {
+	var data []byte
+	var err error
+	if stringutils.IsBlank(user.Username) {
+		err = errors.New("username is empty")
+		log.Error("InsertUserIntoDB | ", err)
+		return err
+	}
+	if stringutils.IsBlank(user.Password) {
+		err = errors.New("password is empty")
+		log.Error("InsertUserIntoDB | ", err)
+		return err
+	}
+	if data, err = json.Marshal(user); err != nil {
+		log.Errorf("InsertValueIntoDB | Unable to marshall user [%+v] | Err: %s", user, err.Error())
 		return err
 	}
 	return client.Set(key, data, 0).Err()
