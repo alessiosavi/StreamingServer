@@ -3,7 +3,7 @@ module github.com/alessiosavi/StreamingServer
 go 1.14
 
 require (
-	github.com/alessiosavi/GoGPUtils v0.0.26
+	github.com/alessiosavi/GoGPUtils v0.0.30
 	github.com/alicebob/miniredis/v2 v2.13.2
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/google/go-cmp v0.5.2 // indirect
