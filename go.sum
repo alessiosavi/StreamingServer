@@ -2,6 +2,8 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/alessiosavi/GoGPUtils v0.0.26 h1:bFdo9SlH+ijKKkRTG8VwhlkctnME5crnnBDpBAEHOwI=
 github.com/alessiosavi/GoGPUtils v0.0.26/go.mod h1:DRI9kEkT/ZZdHr+ESFOMfqWPHsO9WgjzyVXdfOGN83M=
+github.com/alessiosavi/GoGPUtils v0.0.30 h1:+by+u5WlrjCvY3wdcn5aOGBJ2depT1iiNQwD6JlqZfY=
+github.com/alessiosavi/GoGPUtils v0.0.30/go.mod h1:DRI9kEkT/ZZdHr+ESFOMfqWPHsO9WgjzyVXdfOGN83M=
 github.com/alessiosavi/ahocorasick v0.0.3/go.mod h1:GlX7JXZTgFoEccsMg5JZVpjoe+NW7Nk+3b5ldtGP5oU=
 github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a h1:HbKu58rmZpUGpz5+4FfNmIU+FmZg2P3Xaj2v2bfNWmk=
 github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a/go.mod h1:SGnFV6hVsYE877CKEZ6tDNTjaSXYUk6QqoIK6PrAtcc=
