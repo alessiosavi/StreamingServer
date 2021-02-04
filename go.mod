@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/alessiosavi/GoGPUtils v0.0.30
-	github.com/alicebob/miniredis/v2 v2.14.1
+	github.com/alicebob/miniredis/v2 v2.14.2
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/klauspost/compress v1.10.11 // indirect
