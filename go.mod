@@ -16,7 +16,7 @@ require (
 	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/tidwall/gjson v1.6.0 // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
-	github.com/valyala/fasthttp v1.19.0
+	github.com/valyala/fasthttp v1.20.0
 	golang.org/x/text v0.3.3 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
