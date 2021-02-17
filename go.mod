@@ -12,7 +12,7 @@ require (
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/onrik/logrus v0.8.0
 	github.com/onsi/ginkgo v1.14.0 // indirect
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.7.1
 	github.com/stretchr/testify v1.6.1 // indirect
 	github.com/tidwall/gjson v1.6.0 // indirect
 	github.com/tidwall/pretty v1.0.1 // indirect
