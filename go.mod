@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/alessiosavi/GoGPUtils v0.0.42
-	github.com/alicebob/miniredis/v2 v2.14.1
+	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/klauspost/compress v1.11.12 // indirect
 	github.com/magefile/mage v1.11.0 // indirect
