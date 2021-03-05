@@ -179,21 +179,21 @@ func TestInsertValueIntoDB(t *testing.T) {
 		key    string
 		value  datastructures.User
 	}
-	var user_ok datastructures.User = datastructures.User{
+	var user_ok = datastructures.User{
 		Username: "username",
 		Password: "password",
 		Email:    "email",
 		Active:   false,
 	}
 
-	var user_ko_username datastructures.User = datastructures.User{
+	var user_ko_username = datastructures.User{
 		Username: "",
 		Password: "password",
 		Email:    "email",
 		Active:   false,
 	}
 
-	var user_ko_password datastructures.User = datastructures.User{
+	var user_ko_password = datastructures.User{
 		Username: "username",
 		Password: "",
 		Email:    "email",
