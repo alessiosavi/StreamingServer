@@ -182,7 +182,10 @@ func PlayVideo(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redis
 // StreamVideos is delegated to verify if the user is logged in and expose the video to stream
 func StreamVideos(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration) {
 	ctx.Response.Header.SetContentType("text/html; charset=utf-8")
-	files := fileutils.ListFile(cfg.Video.Path)
+	files,err  := fileutils.ListFile(cfg.Video.Path)
+	if err != nil{
+		panic(err)
+	}
 	var s strings.Builder
 	var ssl string
 	if cfg.SSL.Enabled {
