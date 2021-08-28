@@ -1,4 +1,4 @@
-FROM golang:1.15-alpine
+FROM golang:1.17-alpine
 
 #RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ make ; apt clean ; rm -rf /var/lib/apt/lists/* 
 
