@@ -69,13 +69,13 @@ func handleRequests(cfg datastructures.Configuration, redisClient *redis.Client)
 
 		switch string(ctx.Path()) {
 		case "/auth/login":
-			AuthLoginWrapper(ctx, redisClient, cfg) // Login functionality [Test purpouse]
+			AuthLoginWrapper(ctx, redisClient, cfg) // Login functionality [Test purpose]
 		case "/auth/register":
-			AuthRegisterWrapper(ctx, redisClient) // Register an user into the DB [Test purpouse]
+			AuthRegisterWrapper(ctx, redisClient) // Register user into the DB [Test purpose]
 		case "/auth/delete":
 			DeleteCustomerHTTP(ctx, redisClient)
 		case "/auth/verify":
-			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if an user is authorized to use the service
+			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if user is authorized to use the service
 		case "/stream":
 			StreamVideos(ctx, cfg)
 		case "/stats":
@@ -182,8 +182,8 @@ func PlayVideo(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redis
 // StreamVideos is delegated to verify if the user is logged in and expose the video to stream
 func StreamVideos(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration) {
 	ctx.Response.Header.SetContentType("text/html; charset=utf-8")
-	files,err  := fileutils.ListFile(cfg.Video.Path)
-	if err != nil{
+	files, err := fileutils.ListFile(cfg.Video.Path)
+	if err != nil {
 		panic(err)
 	}
 	var s strings.Builder
