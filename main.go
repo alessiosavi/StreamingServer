@@ -60,35 +60,36 @@ func handleRequests(cfg datastructures.Configuration, redisClient *redis.Client)
 			log.Debug("handleRequests | SSL is enabled!")
 		}
 		httputils.SecureRequest(ctx, cfg.SSL.Enabled)
-		ctx.Response.Header.Set("StreamingServer", "$v0.0.2")
+		ctx.Response.Header.Set("StreamingServer", "$v0.0.3")
 
 		// Avoid to print stats for the expvar handler
 		if strings.Compare(string(ctx.Path()), "/stats") != 0 {
 			log.Info("\n|REQUEST --> ", ctx, " \n|Headers: ", ctx.Request.Header.String(), "| Body: ", string(ctx.PostBody()))
 		}
-
+		var err error
 		switch string(ctx.Path()) {
 		case "/auth/login":
-			AuthLoginWrapper(ctx, redisClient, cfg) // Login functionality [Test purpose]
+			err = AuthLoginWrapper(ctx, redisClient, cfg) // Login functionality [Test purpose]
 		case "/auth/register":
-			AuthRegisterWrapper(ctx, redisClient) // Register user into the DB [Test purpose]
+			err = AuthRegisterWrapper(ctx, redisClient) // Register user into the DB [Test purpose]
 		case "/auth/delete":
-			DeleteCustomerHTTP(ctx, redisClient)
+			err = DeleteCustomerHTTP(ctx, redisClient)
 		case "/auth/verify":
-			VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if user is authorized to use the service
+			err = VerifyCookieFromRedisHTTP(ctx, redisClient) // Verify if user is authorized to use the service
 		case "/stream":
 			StreamVideos(ctx, cfg)
 		case "/stats":
 			expvarhandler.ExpvarHandler(ctx)
 		case "/play":
-			PlayVideo(ctx, cfg, redisClient)
+			err = PlayVideo(ctx, cfg, redisClient)
 		case "/activate":
-			ActivateUser(ctx, cfg, redisClient)
+			err = ActivateUser(ctx, cfg, redisClient)
 		default:
-			_, err := ctx.WriteString("The url " + string(ctx.URI().RequestURI()) + string(ctx.QueryArgs().QueryString()) + " does not exist :(\n")
-			commonutils.Check(err, "handleRequests")
+			ctx.WriteString("The url " + string(ctx.URI().RequestURI()) + string(ctx.QueryArgs().QueryString()) + " does not exist :(\n")
 			ctx.Response.SetStatusCode(404)
 		}
+		log.Println(err)
+		ctx.WriteString(err.Error())
 	}
 	// ==== GZIP HANDLER ====
 	// The gzipHandler will serve a compress request only if the client request it with headers (Content-Type: gzip, deflate)
@@ -157,26 +158,26 @@ func ActivateUser(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, re
 }
 
 // PlayVideo is delegated to play the videos in input
-func PlayVideo(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redisClient *redis.Client) {
+func PlayVideo(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration, redisClient *redis.Client) error {
 	if err := VerifyCookieFromRedisHTTP(ctx, redisClient); err == nil {
 		video := string(ctx.FormValue("video"))
 		if stringutils.IsBlank(video) {
 			ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "video parameter is empty", ErrorCode: "EMPTY_VIDEO_PARM", Data: nil})
-			return
+			return json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "video parameter is empty", ErrorCode: "EMPTY_VIDEO_PARM", Data: nil})
+
 		}
 		f := path.Join(cfg.Video.Path, video)
 		if !fileutils.FileExists(f) {
 			ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-			json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "video " + video + " does not exists", ErrorCode: "VIDEO_NOT_FOUND", Data: nil})
-			return
+			return json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "video " + video + " does not exists", ErrorCode: "VIDEO_NOT_FOUND", Data: nil})
+
 		}
 		ctx.SendFile(f)
 	} else {
 		ctx.Response.Header.SetContentType("application/json; charset=utf-8")
-		json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: err.Error(), ErrorCode: "NOT_LOGGED", Data: nil})
-		return
+		return json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: err.Error(), ErrorCode: "NOT_LOGGED", Data: nil})
 	}
+	return nil
 }
 
 // StreamVideos is delegated to verify if the user is logged in and expose the video to stream
@@ -204,7 +205,7 @@ func StreamVideos(ctx *fasthttp.RequestCtx, cfg datastructures.Configuration) {
 
 //AuthRegisterWrapper is the authentication wrapper for register the client into the service.
 //It have to parse the credentials of the customers and register the username and the password into the DB.
-func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
+func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client) error {
 	log.Debug("AuthRegisterWrapper | Starting register functionalities! | Parsing username and password ...")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	ctx.Request.Header.Set("WWW-Authenticate", `Basic realm="Restricted"`)
@@ -213,20 +214,18 @@ func AuthRegisterWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 		log.Debug("AuthRegisterWrapper | Input validated | User: ", username, " | Pass: ", password, " | Calling core functionalities ...")
 		if err := authutils.RegisterUserHTTPCore(username, password, redisClient); err == nil {
 			log.Warn("AuthRegisterWrapper | Customer insert with success! | ", username, ":", password)
-			err := json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User inserted!", ErrorCode: username + ":" + password, Data: nil})
-			commonutils.Check(err, "AuthRegisterWrapper")
+			return json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User inserted!", ErrorCode: username + ":" + password, Data: nil})
 		} else {
-			commonutils.AuthRegisterErrorHelper(ctx, err.Error(), username, password)
+			return commonutils.AuthRegisterErrorHelper(ctx, err.Error(), username, password)
 		}
-	} else { // error parsing credential
-		log.Info("AuthRegisterWrapper | Error parsing credential!! | ", username, ":", password)
-		err := json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Wrong input or fatal error", Data: nil})
-		commonutils.Check(err, "AuthRegisterWrapper")
 	}
+	log.Info("AuthRegisterWrapper | Error parsing credential!! | ", username, ":", password)
+	return json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Wrong input or fatal error", Data: nil})
+
 }
 
 // DeleteCustomerHTTP wrapper for verify if the user is logged
-func DeleteCustomerHTTP(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
+func DeleteCustomerHTTP(ctx *fasthttp.RequestCtx, redisClient *redis.Client) error {
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	log.Debug("DeleteCustomerHTTP | Retrieving username ...")
 	user, psw := ParseAuthenticationCoreHTTP(ctx)
@@ -234,11 +233,9 @@ func DeleteCustomerHTTP(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 	token := ParseTokenFromRequest(ctx)
 	log.Debug("DeleteCustomerHTTP | Retrieving cookie from redis ...")
 	if err := authutils.DeleteUserHTTPCore(user, psw, token, redisClient); err == nil {
-		err = json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User " + user + " removed!", ErrorCode: "", Data: nil})
-		commonutils.Check(err, "DeleteCustomerHTTP")
+		return json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User " + user + " removed!", ErrorCode: "", Data: nil})
 	} else {
-		err = json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User " + user + " NOT removed!", ErrorCode: err.Error(), Data: nil})
-		commonutils.Check(err, "DeleteCustomerHTTP")
+		return json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User " + user + " NOT removed!", ErrorCode: err.Error(), Data: nil})
 	}
 }
 
@@ -250,7 +247,7 @@ func DeleteCustomerHTTP(ctx *fasthttp.RequestCtx, redisClient *redis.Client) {
 // BasichAuth headers: example ->from browser username:password@$URL/auth/login| curl -vL --user "username:password $URL/auth/login"
 // GET Request: example -> from browser $URL/auth/login?user=username&pass=password | curl -vL $URL/auth/login?user=username&pass=password
 // POST Request: example -> curl -vL $URL/auth/login -d 'user=username&pass=password'
-func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg datastructures.Configuration) {
+func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg datastructures.Configuration) error {
 	log.Info("AuthLoginWrapper | Starting authentication | Parsing authentication credentials")
 	ctx.Response.Header.SetContentType("application/json; charset=utf-8")
 	username, password := ParseAuthenticationCoreHTTP(ctx) // Retrieve the username and password encoded in the request from BasicAuth headers, GET & POST
@@ -260,7 +257,10 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg d
 			log.Debug("AuthLoginWrapper | Login succesfully! Generating token!")
 			token := basiccrypt.GenerateToken(username, password) // Generate a simple md5 hashed token
 			log.Info("AuthLoginWrapper | Inserting token into Redis ", token)
-			basicredis.InsertTokenIntoDB(redisClient, username, token, time.Second*time.Duration(cfg.Redis.Token.Expire)) // insert the token into the DB
+			if err = basicredis.InsertTokenIntoDB(redisClient, username, token, time.Second*time.Duration(cfg.Redis.Token.Expire)); err != nil {
+				return err
+			}
+			// insert the token into the DB
 			log.Info("AuthLoginWrapper | Token inserted! All operation finished correctly! | Setting token into response")
 			authcookie := authutils.CreateCookie("GoLog-Token", token, cfg.Redis.Token.Expire)
 			usernameCookie := authutils.CreateCookie("username", username, cfg.Redis.Token.Expire)
@@ -272,10 +272,9 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg d
 			ctx.Response.Header.SetCookie(usernameCookie) // Set the token into the cookie headers
 			ctx.Response.Header.Set("GoLog-Token", token) // Set the token into a custom headers for future security improvments
 			log.Warn("AuthLoginWrapper | Client logged in succesfully!! | ", username, ":", password, " | Token: ", token)
-			err := json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User logged in!", ErrorCode: username + ":" + password, Data: token})
-			commonutils.Check(err, "AuthLoginWrapper")
+			return json.NewEncoder(ctx).Encode(datastructures.Response{Status: true, Description: "User logged in!", ErrorCode: username + ":" + password, Data: token})
 		} else {
-			commonutils.AuthLoginWrapperErrorHelper(ctx, err.Error(), username, password)
+			return commonutils.AuthLoginWrapperErrorHelper(ctx, err.Error(), username, password)
 		}
 	} else { // error parsing credential
 		log.Info("AuthLoginWrapper | Error parsing credential!! |", username+":"+password)
@@ -285,6 +284,7 @@ func AuthLoginWrapper(ctx *fasthttp.RequestCtx, redisClient *redis.Client, cfg d
 		//err := json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Error parsing credential", ErrorCode: "Missing or manipulated input", Data: nil})
 		//commonutils.Check(err, "AuthLoginWrapper")
 	}
+	return nil
 }
 
 // ParseAuthenticationCoreHTTP The purpouse of this method is to decode the username and the password encoded in the request.
@@ -339,9 +339,7 @@ func ParseTokenFromRequest(ctx *fasthttp.RequestCtx) string {
 			log.Warn("ParseTokenFromRequest | Can not find the token! ...")
 			return "" // "COOKIE_NOT_PRESENT"
 		}
-		log.Info("ParseTokenFromRequest | Token found in request! ... | ", token)
-	} else {
-		log.Info("ParseTokenFromRequest | Token found in cookie! ... | ", token)
 	}
+	log.Info("ParseTokenFromRequest | Token found:", token)
 	return token
 }

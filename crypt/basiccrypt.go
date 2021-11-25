@@ -10,8 +10,6 @@ import (
 	"io"
 	"strings"
 
-	commonutils "github.com/alessiosavi/StreamingServer/utils/common"
-
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
@@ -33,8 +31,9 @@ func Encrypt(data []byte, passphrase string) string {
 
 func createHash(key string) string {
 	hasher := md5.New()
-	_, err := hasher.Write([]byte(key))
-	commonutils.Check(err, "createHash")
+	if _, err := hasher.Write([]byte(key)); err != nil {
+		return ""
+	}
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
