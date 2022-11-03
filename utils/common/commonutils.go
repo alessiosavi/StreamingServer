@@ -14,7 +14,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// VerifyCommandLineInput is delegated to manage the inputer parameter provide with the input flag from command line
+// VerifyCommandLineInput is delegated to manage the input parameter provide with the input flag from command line
 func VerifyCommandLineInput() datastructures.Configuration {
 	log.Debug("VerifyCommandLineInput | Init a new configuration from the conf file")
 	c := flag.String("config", "./conf/test.json", "Specify the configuration file.")
@@ -62,7 +62,7 @@ func AuthRegisterErrorHelper(ctx *fasthttp.RequestCtx, check, username, password
 		ctx.Response.Header.DelCookie("GoLog-Token")
 		return json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "Wrong input!", ErrorCode: username, Data: nil})
 
-	} else if strings.Compare(check, "ALREADY_EXIST") == 0 { //User alredy present in DB
+	} else if strings.Compare(check, "ALREADY_EXIST") == 0 { //User already present in DB
 		log.Error("AuthRegisterWrapper | User already exists! | ", username, ":", password)
 		return json.NewEncoder(ctx).Encode(datastructures.Response{Status: false, Description: "User [" + username + "] already exists!", ErrorCode: "USER_ALREADY_EXIST", Data: nil})
 	} else { // General error cause
@@ -90,7 +90,7 @@ func SetDebugLevel(level string) log.Level {
 	return log.DebugLevel
 }
 
-// Random initalizate a new seed using the UNIX Nano time and return an integer between the 2 input value
+// Random initialize a new seed using the UNIX Nano time and return an integer between the 2 input value
 func Random(min int, max int) int {
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(max-min) + min

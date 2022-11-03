@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ConnectToDb use emtpy string for hardcoded port
+// ConnectToDb use empty string for hardcoded port
 func ConnectToDb(addr string, port string, db int) (*redis.Client, error) {
 	// Empty addr and port for default connection
 	if strings.Compare(addr, port) == 0 {
@@ -34,7 +34,7 @@ func ConnectToDb(addr string, port string, db int) (*redis.Client, error) {
 	return client, nil
 }
 
-// GetValueFromDB is delegated to check if a key is alredy inserted and return the value in the dest variable in signature
+// GetValueFromDB is delegated to check if a key is already inserted and return the value in the dest variable in signature
 func GetValueFromDB(client *redis.Client, key string, dest interface{}) error {
 	tmp, err := client.Get(key).Result()
 	if err == nil {
@@ -53,7 +53,7 @@ func GetValueFromDB(client *redis.Client, key string, dest interface{}) error {
 	return err
 }
 
-// RemoveValueFromDB is delegated to check if a key is alredy inserted and return the value
+// RemoveValueFromDB is delegated to remove the given key from redis
 func RemoveValueFromDB(client *redis.Client, key string) error {
 	err := client.Del(key).Err()
 	if err == nil {
@@ -113,8 +113,8 @@ func InsertValueIntoDB(client *redis.Client, key string, value interface{}) erro
 	return client.Set(key, data, 0).Err()
 }
 
-// InsertValueIntoDB is delegated to save a general structure into redis
-func InsertUserIntoDB(client *redis.Client, key string, user datastructures.User) error {
+// insertUserIntoDB is delegated to save a general structure into redis
+func insertUserIntoDB(client *redis.Client, key string, user datastructures.User) error {
 	var data []byte
 	var err error
 	if stringutils.IsBlank(user.Username) {

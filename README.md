@@ -15,14 +15,14 @@ A simple video streaming services with authentication using redis
 ## Introduction
 
 This project is developed for have a plug-and-play video streaming server delegated to expose all the films downloaded
-from you main computer. With this tool, you can save all of you preferite films, song, videos into your PC. Then, you
+from you main computer. With this tool, you can save all of you preterits films, song, videos into your PC. Then, you
 can view these media from anywhere using an internet connection.
 
-The server have a basic authentication system. One endpoint is delegated to register an user, another one is delegated
+The server have a basic authentication system. One endpoint is delegated to register a user, another one is delegated
 to manage the log-in phase.
 
 Another endpoint is delegated to verify the account, so before that an account is able to stream your resources, you
-have to verify that the account is related to somenone that you know
+have to verify that the account is related to someone that you know
 
 ## Requirements
 
@@ -106,7 +106,7 @@ TODO
 
 ## Test
 
-Test are work in progress, is a good first usse for contribute to the project
+Test are work in progress, is a good first issue for contribute to the project
 
 ## Versioning
 

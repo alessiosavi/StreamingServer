@@ -245,7 +245,7 @@ func TestInsertValueIntoDB(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := InsertUserIntoDB(tt.args.client, tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
+			if err := insertUserIntoDB(tt.args.client, tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("InsertValueIntoDB() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

@@ -37,7 +37,7 @@ func createHash(key string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func Decrypt(data, passphrase string) string {
+func decrypt(data, passphrase string) string {
 	key := []byte(createHash(passphrase))
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -68,10 +68,10 @@ func GenerateToken(username string, password string) string {
 	return Encrypt([]byte(username+":"+password), password)
 }
 
-func VerifyTokens(token1, token2, password string) bool {
-	decrypted1 := Decrypt(token1, password)
+func verifyTokens(token1, token2, password string) bool {
+	decrypted1 := decrypt(token1, password)
 	log.Debug("VerifyTokens | First token decrypted [", token1, " -> ", decrypted1, "]")
-	decrypted2 := Decrypt(token2, password)
+	decrypted2 := decrypt(token2, password)
 	logrus.Debug("VerifyTokens | First token decrypted [", token2, " -> ", decrypted2, "]")
 	return strings.Compare(decrypted1, decrypted2) == 0
 }
@@ -79,7 +79,7 @@ func VerifyTokens(token1, token2, password string) bool {
 // VerifyPlainPasswords is delegated to verify if the incoming password is equals to the one stored in the DB
 func VerifyPlainPasswords(plainPswUser, chiperPswDb, key string) bool {
 	log.Debug("VerifyPlainPasswords | Verifying if ["+plainPswUser+"] belong to [", chiperPswDb, "]")
-	plainDb := Decrypt(chiperPswDb, key)
+	plainDb := decrypt(chiperPswDb, key)
 	log.Debug("VerifyPlainPasswords | Plain DB: ", plainDb)
 	return strings.Compare(plainPswUser, plainDb) == 0
 }

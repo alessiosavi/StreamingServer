@@ -21,7 +21,7 @@ import (
 
 // ====== HTTP CORE METHODS ======
 
-// LoginUserHTTPCore is delegated to manage the "core process" of authentication. It use the username in input for retrieve the customer
+// LoginUserHTTPCore is delegated to manage the "core process" of authentication. It uses the username in input for retrieve the customer
 // data from MongoDB. If the data is found, then the password in input will be compared with the one retrieved from the database
 func LoginUserHTTPCore(username, password string, redisClient *redis.Client) error {
 	var err error
@@ -42,21 +42,21 @@ func LoginUserHTTPCore(username, password string, redisClient *redis.Client) err
 }
 
 // RegisterUserHTTPCore is delegated to register the credential of the user into the Redis database.
-// It estabilish the connection to MongoDB with a specialized function, then it create an user with the input data.
-// After that, it ask to a delegated function to insert the data into Redis.
+// It establishes the connection to MongoDB with a specialized function, then it create a user with the input data.
+// After that, it asks a delegated function to insert the data into Redis.
 func RegisterUserHTTPCore(username, password string, redisClient *redis.Client) error {
 	//	User := datastructures.User{Username: username, Password: basiccrypt.Encrypt([]byte(password), username+":"+password)} // Create the user
 	log.Debug("RegisterUserHTTPCore | Registering [", username, ":", password, "]")
 	if redisClient == nil {
 		log.Error("RegisterUserHTTPCore | Impossible to connect to DB | ", redisClient)
-		return errors.New("DB_UNAVAIBLE")
+		return errors.New("DB_UNAVAILABLE")
 	}
 	log.Debug("RegisterUserHTTPCore | Verifying if connection is available ...")
 	if err := redisClient.Ping().Err(); err != nil {
 		log.Error("RegisterUserHTTPCore | Redis ping: ", err)
 		return err
 	}
-	log.Debug("RegisterUserHTTPCore | Connection enstabilished! Inserting data ...")
+	log.Debug("RegisterUserHTTPCore | Connection established! Inserting data ...")
 	// Store the password encrypting with the 'username:password' as key :/
 	// TODO: Increase security
 	var User datastructures.User
@@ -81,8 +81,8 @@ func RegisterUserHTTPCore(username, password string, redisClient *redis.Client) 
 func VerifyCookieFromRedisHTTPCore(user, token string, redisClient *redis.Client) error {
 	var err error
 	log.Debug("VerifyCookieFromRedisHTTPCore | START | User: ", user, " | Token: ", token)
-	if ValidateUsername(user) { // Verify that the credentials respect the rules
-		if ValidateToken(token) { // Verify that the token respect the rules
+	if validateUsername(user) { // Verify that the credentials respect the rules
+		if validateToken(token) { // Verify that the token respect the rules
 			log.Debug("VerifyCookieFromRedisHTTPCore | Credential validated, retrieving token value from Redis ...")
 			if dbToken, err := basicredis.GetTokenFromDB(redisClient, user); err == nil {
 				log.Trace("VerifyCookieFromRedisHTTPCore | Data retrieved!")
@@ -121,7 +121,7 @@ func DeleteUserHTTPCore(user, password, token string, redisClient *redis.Client)
 	log.Debug("DeleteCustomerHTTPCore | Validating username and password ...")
 	if ValidateCredentials(user, password) {
 		log.Debug("DeleteCustomerHTTPCore | Validating token ...")
-		if ValidateToken(token) {
+		if validateToken(token) {
 			log.Debug("DeleteCustomerHTTPCore | Input validated! | Retrieving data from DB ...")
 			var User datastructures.User                                                // Allocate a Person for store the DB result of next instruction
 			if err := basicredis.GetValueFromDB(redisClient, user, &User); err == nil { // User found... Let's now compare the password ..
@@ -166,7 +166,7 @@ func DeleteUserHTTPCore(user, password, token string, redisClient *redis.Client)
 // ====== HTTP UTILS METHODS ======
 
 // ParseAuthCredentialFromHeaders is delegated to extract the username and the password from the BasicAuth header provided by the request
-// In case of error will return two emtpy string; in case of success will return (username,password)
+// In case of error will return two empty string; in case of success will return (username,password)
 func ParseAuthCredentialFromHeaders(auth []byte) (string, string) {
 	basicAuthPrefix := []byte("Basic ")
 	if len(auth) <= len(basicAuthPrefix) {
@@ -181,7 +181,7 @@ func ParseAuthCredentialFromHeaders(auth []byte) (string, string) {
 	}
 	pair := bytes.SplitN(payload, []byte(":"), 2) // Extract the username [0] and password [1] separated by the ':'
 	if len(pair) == 2 {                           // Only "username:password" admitted!
-		log.Info("parseAuthCredentialFromHeaders | Payload splitted: ", string(pair[0]), " | ", string(pair[1]))
+		log.Info("parseAuthCredentialFromHeaders | Payload split: ", string(pair[0]), " | ", string(pair[1]))
 		return string(pair[0]), string(pair[1])
 	}
 	log.Error("parseAuthCredentialFromHeaders | Impossible to split the payload :/ | Payload: ", payload, " | Basic: ", string(auth))
@@ -190,14 +190,14 @@ func ParseAuthCredentialFromHeaders(auth []byte) (string, string) {
 
 // ValidateCredentials is wrapper for the multiple method for validate the input parameters
 func ValidateCredentials(user string, pass string) bool {
-	if ValidateUsername(user) && PasswordValidation(pass) {
+	if validateUsername(user) && passwordValidation(pass) {
 		return true
 	}
 	return false
 }
 
-// PasswordValidation execute few check on the password in input
-func PasswordValidation(password string) bool {
+// passwordValidation execute few check on the password in input
+func passwordValidation(password string) bool {
 	if stringutils.IsBlank(password) {
 		log.Warn("PasswordValidation | Password is empty :/")
 		return false
@@ -215,8 +215,8 @@ func PasswordValidation(password string) bool {
 	return true
 }
 
-// ValidateUsername execute few check on the username in input
-func ValidateUsername(username string) bool {
+// validateUsername execute few check on the username in input
+func validateUsername(username string) bool {
 	if stringutils.IsBlank(username) {
 		log.Warn("ValidateUsername | Username is empty :/")
 		return false
@@ -225,7 +225,7 @@ func ValidateUsername(username string) bool {
 		log.Warn("ValidateUsername | Username len not valid")
 		return false
 	}
-	myReg := regexp.MustCompile("^[a-zA-Z0-9-_@]{4,32}$") // The string have to contains ONLY (letter OR number)
+	myReg := regexp.MustCompile("^[a-zA-Z0-9-_@]{4,32}$") // The string have to contain ONLY (letter OR number)
 	if !myReg.MatchString(username) {                     // the input doesn't match the regexp
 		log.Warn("ValidateUsername | Username have strange character :/ [", username, "]")
 		return false
@@ -234,8 +234,8 @@ func ValidateUsername(username string) bool {
 	return true
 }
 
-// ValidateToken execute few check on the token in input
-func ValidateToken(token string) bool {
+// validateToken execute few check on the token in input
+func validateToken(token string) bool {
 	log.Debug("ValidateToken | Validating [", token, "] ...")
 	if stringutils.IsBlank(token) {
 		log.Warn("ValidateToken | Token is empty :/")
@@ -249,7 +249,7 @@ func ValidateToken(token string) bool {
 	return true
 }
 
-// RedirectCookie return the cookie by the parameter in input and reassing to the response
+// RedirectCookie return the cookie by the parameter in input and reassign to the response
 
 // ParseAuthCredentialsFromRequestBody is delegated to extract the username and the password from the request body
 func ParseAuthCredentialsFromRequestBody(ctx *fasthttp.RequestCtx) (string, string) {
@@ -259,7 +259,7 @@ func ParseAuthCredentialsFromRequestBody(ctx *fasthttp.RequestCtx) (string, stri
 	return user, pass
 }
 
-//CreateCookie Method that return a cookie valorized as input (GoLog-Token as key)
+// CreateCookie Method that return a cookie valorized as input (GoLog-Token as key)
 func CreateCookie(key string, value string, expire int) *fasthttp.Cookie {
 	if strings.Compare(key, "") == 0 {
 		key = "GoLog-Token"
