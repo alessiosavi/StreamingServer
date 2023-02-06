@@ -17,8 +17,7 @@ require (
 	github.com/klauspost/compress v1.15.12 // indirect
 	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/onsi/gomega v1.10.1 // indirect
-	github.com/tidwall/gjson v1.6.0 // indirect
-	github.com/tidwall/pretty v1.0.1 // indirect
+	github.com/tidwall/gjson v1.9.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20210529063254-f4c35e4016d9 // indirect
 	golang.org/x/sys v0.1.0 // indirect
